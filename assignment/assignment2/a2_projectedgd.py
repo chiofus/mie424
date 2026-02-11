@@ -70,7 +70,7 @@ def get_beta_ols(X: ndarray, Y: ndarray):
 
     return np.matmul(np.matmul(np.linalg.inv(np.matmul(X.T, X)), X.T), Y)
 
-def get_L2_norm(X: ndarray):
+def get_L2_norm_squared(X: ndarray):
     return np.dot(X,X)
 
 # Train the model with projected gradient descent
@@ -89,17 +89,32 @@ def nonneg_OLS(X, Y, S, threshold=1e-22):
     # Initialize beta with zeros
     beta = np.zeros(d)
 
+    #Because of the projection onto C, I noticed that some beta weights simply stay too large, and the model never converges for
+    #the given learning rate, so I decided to also include a max nbr. of iters, in case the learning threshold is never reached.
+    curr_iter = 0
+
     while True:
+        curr_iter += 1
 
         ## FILL IN: compute beta_new using projected gradient descent
         ## use 1/L as learning rate
         ## Loss function: 1/2 * || X beta - Y ||_2^2
 
-        beta_new = None
+        #First, need to find gradients vector for current beta's loss
+        #Vector of loss' gradients is given by: (X^TX)Beta-(X^TY)
+
+        beta_loss_grad: ndarray = np.matmul(XTX, beta)-XTY
+
+        #We can now find the updated beta by adding the loss' grad times our learning rate 1/L
+        beta_updated: ndarray = beta - (1/L)*beta_loss_grad
+
+        #Now, simply project it onto C for the entries that must be greater than zero, according to S
+        beta_new = nonneg_project(beta_updated, S)
 
         ## FILL IN: complete the stopping criteria
         ## threshold: if the update in beta has squared l2 norm less than threshold then stop the gradient descent
-        if (None):
+        update_size = get_L2_norm_squared((1/L)*beta_loss_grad)
+        if (update_size < threshold or curr_iter > 10000):
             break
         else:
             beta = beta_new
@@ -137,7 +152,7 @@ for i in range(num_trials):
 
     beta_ols    = get_beta_ols(X, Y)
     beta_ols2   = nonneg_project(beta_ols,indices_nonneg)
-    # beta_nonneg = nonneg_OLS(X, Y, indices_nonneg)
+    beta_nonneg = nonneg_OLS(X, Y, indices_nonneg)
 
     ## FILL IN: compute estimation error, mean squared error of predictions
     ## _beta_err[i]: mean squared error of estimating beta_true in ith trial
@@ -146,9 +161,9 @@ for i in range(num_trials):
     ##
     ## Hint: for prediciton error, normalize your result for them to be comparable
 
-    ols_beta_err[i]     = get_L2_norm(beta_ols - beta_star)
-    ols2_beta_err[i]    = get_L2_norm(beta_ols2 - beta_star)
-    nonneg_beta_err[i]  = None
+    ols_beta_err[i]     = get_L2_norm_squared(beta_ols - beta_star)
+    ols2_beta_err[i]    = get_L2_norm_squared(beta_ols2 - beta_star)
+    nonneg_beta_err[i]  = get_L2_norm_squared(beta_nonneg - beta_star)
 
     ols_train_err[i]    = None
     ols2_train_err[i]   = None
@@ -158,11 +173,9 @@ for i in range(num_trials):
     ols2_test_err[i]    = None
     nonneg_test_err[i]  = None
 
-print(f'OLS Average             beta Estimation MSE: {np.average(ols_beta_err):.3f}   ')
-    #   Average Train MSE: {np.average(ols_train_err):.3f}   Average Test MSE: {np.average(ols_test_err):.3f} ')
-print(f'Projected OLS Average   beta Estimation MSE: {np.average(ols2_beta_err):.3f}   ')
-    #   Average Train MSE: {np.average(ols2_train_err):.3f}   Average Test MSE: {np.average(ols2_test_err):.3f} ')
-# print(f'Non-negative LS Average beta Estimation MSE: {np.average(nonneg_beta_err):.3f}   Average Train MSE: {np.average(nonneg_train_err):.3f}   Average Test MSE: {np.average(nonneg_test_err):.3f} ')
+print(f'OLS Average             beta Estimation MSE: {np.average(ols_beta_err):.3f}   Average Train MSE: {np.average(ols_train_err):.3f}   Average Test MSE: {np.average(ols_test_err):.3f} ')
+print(f'Projected OLS Average   beta Estimation MSE: {np.average(ols2_beta_err):.3f}   Average Train MSE: {np.average(ols2_train_err):.3f}   Average Test MSE: {np.average(ols2_test_err):.3f} ')
+print(f'Non-negative LS Average beta Estimation MSE: {np.average(nonneg_beta_err):.3f}   Average Train MSE: {np.average(nonneg_train_err):.3f}   Average Test MSE: {np.average(nonneg_test_err):.3f} ')
 
 ###################################
 # For part (d)
