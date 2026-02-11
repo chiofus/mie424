@@ -121,7 +121,7 @@ def nonneg_OLS(X, Y, S, threshold=1e-22):
     return beta_new
 
 
-num_trials = 1000
+num_trials = 300
 num_samples  = 100
 num_features = 20
 num_nonneg   = 7
@@ -150,9 +150,11 @@ for i in range(num_trials):
     ## beta_ols: use analytical formula to compute beta_ols
     ## beta_nonneg: use the function nonneg_OLS to compute beta_nonneg
 
-    beta_ols    = get_beta_ols(X, Y)
+    #Assume that these tree estimators are to only be generated using the X_train and Y_train subsets of X and Y, respectively.
+
+    beta_ols    = get_beta_ols(X_train, Y_train)
     beta_ols2   = nonneg_project(beta_ols,indices_nonneg)
-    beta_nonneg = nonneg_OLS(X, Y, indices_nonneg)
+    beta_nonneg = nonneg_OLS(X_train, Y_train, indices_nonneg)
 
     ## FILL IN: compute estimation error, mean squared error of predictions
     ## _beta_err[i]: mean squared error of estimating beta_true in ith trial
@@ -165,13 +167,13 @@ for i in range(num_trials):
     ols2_beta_err[i]    = get_L2_norm_squared(beta_ols2 - beta_star)
     nonneg_beta_err[i]  = get_L2_norm_squared(beta_nonneg - beta_star)
 
-    ols_train_err[i]    = None
-    ols2_train_err[i]   = None
-    nonneg_train_err[i] = None
+    ols_train_err[i]    = (1/2)*get_L2_norm_squared(np.matmul(X_train, beta_ols) - Y_train)
+    ols2_train_err[i]   = (1/2)*get_L2_norm_squared(np.matmul(X_train, beta_ols2) - Y_train)
+    nonneg_train_err[i] = (1/2)*get_L2_norm_squared(np.matmul(X_train, beta_nonneg) - Y_train)
 
-    ols_test_err[i]     = None
-    ols2_test_err[i]    = None
-    nonneg_test_err[i]  = None
+    ols_test_err[i]     = (1/2)*get_L2_norm_squared(np.matmul(X_test, beta_ols) - Y_test)
+    ols2_test_err[i]    = (1/2)*get_L2_norm_squared(np.matmul(X_test, beta_ols2) - Y_test)
+    nonneg_test_err[i]  = (1/2)*get_L2_norm_squared(np.matmul(X_test, beta_nonneg) - Y_test)
 
 print(f'OLS Average             beta Estimation MSE: {np.average(ols_beta_err):.3f}   Average Train MSE: {np.average(ols_train_err):.3f}   Average Test MSE: {np.average(ols_test_err):.3f} ')
 print(f'Projected OLS Average   beta Estimation MSE: {np.average(ols2_beta_err):.3f}   Average Train MSE: {np.average(ols2_train_err):.3f}   Average Test MSE: {np.average(ols2_test_err):.3f} ')
