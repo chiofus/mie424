@@ -1,8 +1,8 @@
 
-# NAME:
-# UTorID:
-# UTorEmail:
-# Student #
+# NAME: Durango González Avitia
+# UTorID: gonza574
+# UTorEmail: durango.gonzalez@mail.utoronto.ca
+# Student # 1007630459
 
 ################
 ## MIE424 (2026 Winter)
@@ -19,9 +19,11 @@
 
 import numpy as np
 from sklearn.model_selection import train_test_split
-
+from typing import List
+from numpy import ndarray
 # Fixing seed for evaluation
 seed=4242026
+np.random.seed(seed)
 ###################################
 # For part (a) to part (c)
 ###################################
@@ -40,7 +42,7 @@ def generate_data(num_samples, num_features, num_nonneg, nonneg_value):
 
 
 # Projection Function
-def nonneg_project(u, S):
+def nonneg_project(u: ndarray, S: ndarray):
     ##
     ## Computes
     ##   argmin_{v}  || u - v ||_2^2
@@ -53,7 +55,23 @@ def nonneg_project(u, S):
     ##
     ##
 
+    v: ndarray = [val for val in u] #this would be optimal if all u were positive
+
+    #now, check and fix for v[j] in S
+    for indx in S:
+        if v[indx] < 0: v[indx] = 0 #setting to zero minimizes the increase to obj fn.
+
     return v
+
+def get_beta_ols(X: ndarray, Y: ndarray):
+    #Want to find what an 'optimal' least squares beta approximation would be
+
+    #Given by: (X^TX)^(-1)X^TY
+
+    return np.matmul(np.matmul(np.linalg.inv(np.matmul(X.T, X)), X.T), Y)
+
+def get_L2_norm(X: ndarray):
+    return np.dot(X,X)
 
 # Train the model with projected gradient descent
 def nonneg_OLS(X, Y, S, threshold=1e-22):
@@ -117,9 +135,9 @@ for i in range(num_trials):
     ## beta_ols: use analytical formula to compute beta_ols
     ## beta_nonneg: use the function nonneg_OLS to compute beta_nonneg
 
-    beta_ols    = None
+    beta_ols    = get_beta_ols(X, Y)
     beta_ols2   = nonneg_project(beta_ols,indices_nonneg)
-    beta_nonneg = None
+    # beta_nonneg = nonneg_OLS(X, Y, indices_nonneg)
 
     ## FILL IN: compute estimation error, mean squared error of predictions
     ## _beta_err[i]: mean squared error of estimating beta_true in ith trial
@@ -128,8 +146,8 @@ for i in range(num_trials):
     ##
     ## Hint: for prediciton error, normalize your result for them to be comparable
 
-    ols_beta_err[i]     = None
-    ols2_beta_err[i]    = None
+    ols_beta_err[i]     = get_L2_norm(beta_ols - beta_star)
+    ols2_beta_err[i]    = get_L2_norm(beta_ols2 - beta_star)
     nonneg_beta_err[i]  = None
 
     ols_train_err[i]    = None
@@ -140,9 +158,11 @@ for i in range(num_trials):
     ols2_test_err[i]    = None
     nonneg_test_err[i]  = None
 
-print(f'OLS Average             beta Estimation MSE: {np.average(ols_beta_err):.3f}   Average Train MSE: {np.average(ols_train_err):.3f}   Average Test MSE: {np.average(ols_test_err):.3f} ')
-print(f'Projected OLS Average   beta Estimation MSE: {np.average(ols2_beta_err):.3f}   Average Train MSE: {np.average(ols2_train_err):.3f}   Average Test MSE: {np.average(ols2_test_err):.3f} ')
-print(f'Non-negative LS Average beta Estimation MSE: {np.average(nonneg_beta_err):.3f}   Average Train MSE: {np.average(nonneg_train_err):.3f}   Average Test MSE: {np.average(nonneg_test_err):.3f} ')
+print(f'OLS Average             beta Estimation MSE: {np.average(ols_beta_err):.3f}   ')
+    #   Average Train MSE: {np.average(ols_train_err):.3f}   Average Test MSE: {np.average(ols_test_err):.3f} ')
+print(f'Projected OLS Average   beta Estimation MSE: {np.average(ols2_beta_err):.3f}   ')
+    #   Average Train MSE: {np.average(ols2_train_err):.3f}   Average Test MSE: {np.average(ols2_test_err):.3f} ')
+# print(f'Non-negative LS Average beta Estimation MSE: {np.average(nonneg_beta_err):.3f}   Average Train MSE: {np.average(nonneg_train_err):.3f}   Average Test MSE: {np.average(nonneg_test_err):.3f} ')
 
 ###################################
 # For part (d)
