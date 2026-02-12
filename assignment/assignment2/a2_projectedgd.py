@@ -40,7 +40,6 @@ def generate_data(num_samples, num_features, num_nonneg, nonneg_value):
 
     return X, Y, beta_star
 
-
 # Projection Function
 def nonneg_project(u: ndarray, S: ndarray):
     ##
@@ -167,14 +166,15 @@ for i in range(num_trials):
     ols2_beta_err[i]    = get_L2_norm_squared(beta_ols2 - beta_star)
     nonneg_beta_err[i]  = get_L2_norm_squared(beta_nonneg - beta_star)
 
-    ols_train_err[i]    = (1/2)*get_L2_norm_squared(np.matmul(X_train, beta_ols) - Y_train)
-    ols2_train_err[i]   = (1/2)*get_L2_norm_squared(np.matmul(X_train, beta_ols2) - Y_train)
-    nonneg_train_err[i] = (1/2)*get_L2_norm_squared(np.matmul(X_train, beta_nonneg) - Y_train)
+    ols_train_err[i]    = get_L2_norm_squared(np.matmul(X_train, beta_ols) - Y_train)
+    ols2_train_err[i]   = get_L2_norm_squared(np.matmul(X_train, beta_ols2) - Y_train)
+    nonneg_train_err[i] = get_L2_norm_squared(np.matmul(X_train, beta_nonneg) - Y_train)
 
-    ols_test_err[i]     = (1/2)*get_L2_norm_squared(np.matmul(X_test, beta_ols) - Y_test)
-    ols2_test_err[i]    = (1/2)*get_L2_norm_squared(np.matmul(X_test, beta_ols2) - Y_test)
-    nonneg_test_err[i]  = (1/2)*get_L2_norm_squared(np.matmul(X_test, beta_nonneg) - Y_test)
+    ols_test_err[i]     = get_L2_norm_squared(np.matmul(X_test, beta_ols) - Y_test)
+    ols2_test_err[i]    = get_L2_norm_squared(np.matmul(X_test, beta_ols2) - Y_test)
+    nonneg_test_err[i]  = get_L2_norm_squared(np.matmul(X_test, beta_nonneg) - Y_test)
 
+print('Part C')
 print(f'OLS Average             beta Estimation MSE: {np.average(ols_beta_err):.3f}   Average Train MSE: {np.average(ols_train_err):.3f}   Average Test MSE: {np.average(ols_test_err):.3f} ')
 print(f'Projected OLS Average   beta Estimation MSE: {np.average(ols2_beta_err):.3f}   Average Train MSE: {np.average(ols2_train_err):.3f}   Average Test MSE: {np.average(ols2_test_err):.3f} ')
 print(f'Non-negative LS Average beta Estimation MSE: {np.average(nonneg_beta_err):.3f}   Average Train MSE: {np.average(nonneg_train_err):.3f}   Average Test MSE: {np.average(nonneg_test_err):.3f} ')
@@ -186,14 +186,14 @@ print(f'Non-negative LS Average beta Estimation MSE: {np.average(nonneg_beta_err
 def generate_data_2(num_samples, num_features):
 
     beta_star = np.random.randn(num_features)
-    beta_star = beta_star / np.linalg.norm(beta_star)
+    beta_star = beta_star / np.linalg.norm(beta_star) #normalize so that taking norm again has value 1.0
 
     X = np.random.randn(num_samples, num_features)
     Y = np.matmul(X,beta_star)+np.random.randn(num_samples)
     return X, Y, beta_star
 
 # Projection Function
-def unit_ball_project(u):
+def unit_ball_project(u: ndarray):
     ## Computes
     ##   argmin_{v}  || u - v ||_2^2
     ##   subject to: ||v||_2<=1
@@ -205,10 +205,19 @@ def unit_ball_project(u):
     ##
     ##
     ##
+
+    #Would ideally have L2 norm <= 1 met:
+    v: ndarray = [val for val in u]
+
+    #Check if met, fix if not
+    val_norm = np.linalg.norm(v)
+    if val_norm > 1:
+        v = v / val_norm
+
     return v
 
 # Train the model with projected gradient descent
-def unit_ball_CLS(X, Y, threshold=1e-22):
+def unit_ball_CLS(X: ndarray, Y: ndarray, threshold=1e-22):
     ## Input
     ## X: X_train
     ## Y: Y_train
@@ -218,19 +227,50 @@ def unit_ball_CLS(X, Y, threshold=1e-22):
     ## L:   maximum eigenvalue of the matrix X^TX
     ## 1/L: learning rate for projected gradient descent
     ## Loss function: 1/2 * || X beta - Y ||_2^2
-    
+
+    #Assume that we are still projecting into the unit ball after every iteration of beta
+
+    # Initialize beta with zeros
+    n, d = X.shape
+
+    beta = np.zeros(d)
+
     XTX  = np.matmul(np.transpose(X),X)
     XTY  = np.matmul(np.transpose(X),Y)
     w, v = np.linalg.eig(XTX)
     L    = np.max(w)
     
     ## FILL IN: complete the function
+
+    #Because of the projection onto the unit ball, I noticed that some beta weights simply stay too large, and the model never converges for
+    #the given learning rate, so I decided to also include a max nbr. of iters, in case the learning threshold is never reached.
+    curr_iter = 0
     
-    
-    
-    
-    
-    
+    while True:
+        curr_iter += 1
+
+        ## FILL IN: compute beta_cls using projected gradient descent
+        ## use 1/L as learning rate
+        ## Loss function: 1/2 * || X beta - Y ||_2^2
+
+        #First, need to find gradients vector for current beta's loss
+        #Vector of loss' gradients is given by: (X^TX)Beta-(X^TY)
+
+        beta_loss_grad: ndarray = np.matmul(XTX, beta)-XTY
+
+        #We can now find the updated beta by adding the loss' grad times our learning rate 1/L
+        beta_updated: ndarray = beta - (1/L)*beta_loss_grad
+
+        #Now, simply project beta onto the unit ball, so that it satisfies L2 norm <= 1
+        beta_cls = unit_ball_project(beta_updated)
+
+        ## FILL IN: complete the stopping criteria
+        ## threshold: if the update in beta has squared l2 norm less than threshold then stop the gradient descent
+        update_size = get_L2_norm_squared((1/L)*beta_loss_grad)
+        if (update_size < threshold or curr_iter > 10000):
+            break
+        else:
+            beta = beta_cls
 
     return beta_cls
 
@@ -262,9 +302,9 @@ for i in range(num_trials):
     ## beta_ols2: projection beta_ols using function unit_ball_project(...)
     ## beta_cls: use the function unit_ball_cls to compute beta_nonneg
 
-    beta_ols    = None
-    beta_ols2   = None
-    beta_nonneg = None
+    beta_ols    = get_beta_ols(X_train, Y_train)
+    beta_ols2   = unit_ball_project(beta_ols)
+    beta_nonneg = unit_ball_CLS(X_train, Y_train)
 
     ## FILL IN: compute estimation error, mean squared error of predictions
     ## _beta_err[i]: mean squared error of estimating beta_true in ith trial
@@ -273,18 +313,19 @@ for i in range(num_trials):
     ##
     ## Hint: for prediciton error, normalize your result for them to be comparable
 
-    ols_beta_err[i]  = None
-    ols2_beta_err[i] = None
-    cls_beta_err[i]  = None
+    ols_beta_err[i]  = get_L2_norm_squared(beta_ols - beta_star)
+    ols2_beta_err[i] = get_L2_norm_squared(beta_ols2 - beta_star)
+    cls_beta_err[i]  = get_L2_norm_squared(beta_nonneg - beta_star)
 
-    ols_train_err[i]  = None
-    ols2_train_err[i] = None
-    cls_train_err[i]  = None
+    ols_train_err[i]  = get_L2_norm_squared(np.matmul(X_train, beta_ols) - Y_train)
+    ols2_train_err[i] = get_L2_norm_squared(np.matmul(X_train, beta_ols2) - Y_train)
+    cls_train_err[i]  = get_L2_norm_squared(np.matmul(X_train, beta_nonneg) - Y_train)
 
-    ols_test_err[i]  = None
-    ols2_test_err[i] = None
-    cls_test_err[i]  = None
+    ols_test_err[i]  = get_L2_norm_squared(np.matmul(X_test, beta_ols) - Y_test)
+    ols2_test_err[i] = get_L2_norm_squared(np.matmul(X_test, beta_ols2) - Y_test)
+    cls_test_err[i]  = get_L2_norm_squared(np.matmul(X_test, beta_nonneg) - Y_test)
 
+print('Part D')
 print(f'OLS Average             beta Estimation MSE: {np.average(ols_beta_err):.3f}   Average Train MSE: {np.average(ols_train_err):.3f}   Average Test MSE: {np.average(ols_test_err):.3f} ')
 print(f'Projected OLS Average   beta Estimation MSE: {np.average(ols2_beta_err):.3f}   Average Train MSE: {np.average(ols2_train_err):.3f}   Average Test MSE: {np.average(ols2_test_err):.3f} ')
 print(f'Constrained LS Average  beta Estimation MSE: {np.average(cls_beta_err):.3f}   Average Train MSE: {np.average(cls_train_err):.3f}   Average Test MSE: {np.average(cls_test_err):.3f} ')

@@ -1,0 +1,8 @@
+Part C
+OLS Average             beta Estimation MSE: 0.534   Average Train MSE: 40.167   Average Test MSE: 60.589 
+Projected OLS Average   beta Estimation MSE: 0.448   Average Train MSE: 43.329   Average Test MSE: 56.858 
+Non-negative LS Average beta Estimation MSE: 0.416   Average Train MSE: 42.370   Average Test MSE: 55.633 
+Part D
+OLS Average             beta Estimation MSE: 0.534   Average Train MSE: 40.167   Average Test MSE: 60.589 
+Projected OLS Average   beta Estimation MSE: 0.366   Average Train MSE: 44.106   Average Test MSE: 54.150 
+Constrained LS Average  beta Estimation MSE: 0.334   Average Train MSE: 43.016   Average Test MSE: 53.053 
